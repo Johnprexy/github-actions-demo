@@ -1,51 +1,47 @@
-const { add, subtract, multiply, divide } = require('../src/calculator');
+const calculator = require('../src/calculator');
 
-// Simple test runner
-function test(description, fn) {
-    try {
-        fn();
-        console.log('✓', description);
-    } catch (error) {
-        console.log('✗', description);
-        console.log('  Error:', error.message);
-        process.exit(1);
-    }
-}
+describe('Calculator', () => {
+  describe('add', () => {
+    test('should add two positive numbers', () => {
+      expect(calculator.add(2, 3)).toBe(5);
+    });
 
-function assertEquals(actual, expected, message) {
-    if (actual !== expected) {
-        throw new Error(`${message}: expected ${expected}, got ${actual}`);
-    }
-}
+    test('should add negative numbers', () => {
+      expect(calculator.add(-2, -3)).toBe(-5);
+    });
 
-// Run tests
-console.log('Running Calculator Tests...\n');
+    test('should handle zero', () => {
+      expect(calculator.add(5, 0)).toBe(5);
+    });
+  });
 
-test('Addition: 2 + 3 = 5', () => {
-    assertEquals(add(2, 3), 5, 'Addition test failed');
+  describe('subtract', () => {
+    test('should subtract two numbers', () => {
+      expect(calculator.subtract(5, 3)).toBe(2);
+    });
+
+    test('should handle negative results', () => {
+      expect(calculator.subtract(3, 5)).toBe(-2);
+    });
+  });
+
+  describe('multiply', () => {
+    test('should multiply two numbers', () => {
+      expect(calculator.multiply(4, 3)).toBe(12);
+    });
+
+    test('should handle zero multiplication', () => {
+      expect(calculator.multiply(5, 0)).toBe(0);
+    });
+  });
+
+  describe('divide', () => {
+    test('should divide two numbers', () => {
+      expect(calculator.divide(10, 2)).toBe(5);
+    });
+
+    test('should throw error for division by zero', () => {
+      expect(() => calculator.divide(5, 0)).toThrow('Division by zero is not allowed');
+    });
+  });
 });
-
-test('Subtraction: 5 - 2 = 3', () => {
-    assertEquals(subtract(5, 2), 3, 'Subtraction test failed');
-});
-
-test('Multiplication: 4 * 3 = 12', () => {
-    assertEquals(multiply(4, 3), 12, 'Multiplication test failed');
-});
-
-test('Division: 10 / 2 = 5', () => {
-    assertEquals(divide(10, 2), 5, 'Division test failed');
-});
-
-test('Division by zero throws error', () => {
-    try {
-        divide(5, 0);
-        throw new Error('Expected division by zero to throw error');
-    } catch (error) {
-        if (!error.message.includes('Division by zero')) {
-            throw error;
-        }
-    }
-});
-
-console.log('\nAll tests passed! 🎉');

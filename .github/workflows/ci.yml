@@ -1,58 +1,224 @@
-# Name of the workflow
-name: CI Pipeline
+name: 🔄 Continuous Integration
 
-# When to run this workflow
+# When should this workflow run?
 on:
-  # Run on every push to main branch
+  # Run on every push to master branch
   push:
     branches: [ master ]
-  # Run on every pull request to main branch
+  # Run on every pull request to master branch
   pull_request:
     branches: [ master ]
   # Allow manual triggering
   workflow_dispatch:
 
-# Jobs to run
+# Define the jobs
 jobs:
-  # Job 1: Test the application
-  test:
-    name: Run Tests
+  # Job 1: Code Quality Checks
+  code-quality:
+    name: 🔍 Code Quality
     runs-on: ubuntu-latest
     
     steps:
-    # Step 1: Get the code
+    # Step 1: Get the code from repository
     - name: Checkout code
       uses: actions/checkout@v4
     
-    # Step 2: Setup Node.js
+    # Step 2: Setup Node.js environment
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        cache: 'npm'  # Cache npm dependencies for faster builds
     
-    # Step 3: Run tests
-    - name: Run tests
-      run: npm test
+    # Step 3: Install project dependencies
+    - name: Install dependencies
+      run: npm ci
     
-    # Step 4: Run the app
-    - name: Run application
-      run: npm start
+    # Step 4: Run ESLint to check code style
+    - name: Run ESLint
+      run: npm run lint
 
-  # Job 2: Check code (runs in parallel with test job)
-  lint:
-    name: Code Quality Check
+  # Job 2: Unit Tests (runs in parallel with code-quality)
+  unit-tests:
+    name: 🧪 Unit Tests
     runs-on: ubuntu-latest
+    
+    # Test on multiple Node.js versions
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Check file structure
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
+    
+    # Generate test coverage report (only for Node.js 18)
+    - name: Generate coverage report
+      if: matrix.node-version == '18'
+      run: npm test -- --coverage
+    
+    # Upload coverage report as artifact
+    - name: Upload coverage report
+      if: matrix.node-version == '18'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage/
+
+  # Job 3: Build Application (runs after code-quality and unit-tests pass)
+  build:
+    name: 🏗️ Build Application
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-tests]  # Wait for these jobs to complete
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    # Simulate a build process
+    - name: Build application
       run: |
-        echo "Checking project structure..."
-        ls -la
-        echo "Source files:"
-        ls -la src/
-        echo "Test files:"
-        ls -la tests/
-        echo "✓ Project structure looks good!"
+        echo "Building application..."
+        mkdir -p dist
+        cp -r src/ dist/
+        cp package*.json dist/
+        echo "Build completed successfully!"
+        ls -la dist/
+    
+    # Upload build artifacts
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: dist/
+        retention-days: 7
+
+  # Job 4: Integration Tests (runs after build)
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    # Download build artifacts from previous job
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+        path: dist/
+    
+    # Start the application in background
+    - name: Start application
+      run: |
+        npm start &
+        sleep 5  # Wait for app to start
+        echo "Application started"
+    
+    # Test if the application is responding
+    - name: Test application health
+      run: |
+        curl -f http://localhost:3000/ || exit 1
+        echo "Health check passed!"
+    
+    # Test API endpoints
+    - name: Test API endpoints
+      run: |
+        # Test add endpoint
+        curl -X POST http://localhost:3000/add \
+          -H "Content-Type: application/json" \
+          -d '{"a": 5, "b": 3}' \
+          | grep '"result":8' || exit 1
+        
+        # Test multiply endpoint
+        curl -X POST http://localhost:3000/multiply \
+          -H "Content-Type: application/json" \
+          -d '{"a": 4, "b": 3}' \
+          | grep '"result":12' || exit 1
+        
+        echo "API tests passed!"
+
+  # Job 5: Security Scan (basic dependency check)
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    # Check for known vulnerabilities in dependencies
+    - name: Run security audit
+      run: npm audit --audit-level moderate
+    
+    # Continue even if audit finds issues (for learning purposes)
+    - name: Audit summary
+      run: |
+        echo "Security audit completed"
+        echo "In production, you might want to fail the build on high-severity issues"
+
+  # Job 6: Deployment Readiness (final check)
+  deployment-ready:
+    name: 🚀 Deployment Ready
+    runs-on: ubuntu-latest
+    needs: [build, integration-tests, security-scan]
+    if: github.ref == 'refs/heads/main'  # Only run on main branch
+    
+    steps:
+    - name: Deployment readiness check
+      run: |
+        echo "🎉 All CI checks passed!"
+        echo "📦 Build artifacts available"
+        echo "✅ Tests passing"
+        echo "🛡️ Security scan completed"
+        echo "🚀 Ready for deployment!"
+    
+    # In a real scenario, this is where you might trigger deployment
+    - name: Notify team (simulation)
+      run: |
+        echo "In production, this would:"
+        echo "- Send Slack notification"
+        echo "- Trigger deployment pipeline"
+        echo "- Update deployment status"

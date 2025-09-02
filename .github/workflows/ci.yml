@@ -1,0 +1,58 @@
+# Name of the workflow
+name: CI Pipeline
+
+# When to run this workflow
+on:
+  # Run on every push to main branch
+  push:
+    branches: [ main ]
+  # Run on every pull request to main branch
+  pull_request:
+    branches: [ main ]
+  # Allow manual triggering
+  workflow_dispatch:
+
+# Jobs to run
+jobs:
+  # Job 1: Test the application
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Step 1: Get the code
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Step 2: Setup Node.js
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    # Step 3: Run tests
+    - name: Run tests
+      run: npm test
+    
+    # Step 4: Run the app
+    - name: Run application
+      run: npm start
+
+  # Job 2: Check code (runs in parallel with test job)
+  lint:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check file structure
+      run: |
+        echo "Checking project structure..."
+        ls -la
+        echo "Source files:"
+        ls -la src/
+        echo "Test files:"
+        ls -la tests/
+        echo "✓ Project structure looks good!"

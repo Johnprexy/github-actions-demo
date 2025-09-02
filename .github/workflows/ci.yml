@@ -2,12 +2,12 @@ name: Continuous Integration
 
 # When should this workflow run?
 on:
-  # Run on every push to main branch
+  # Run on every push to master branch
   push:
-    branches: [ main ]
-  # Run on every pull request to main branch
+    branches: [ master ]
+  # Run on every pull request to master branch
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   # Allow manual triggering
   workflow_dispatch:
 
@@ -199,8 +199,8 @@ jobs:
     name: Deployment Ready
     runs-on: ubuntu-latest
     needs: [build, integration-tests, security-scan]
-    if: github.ref == 'refs/heads/main'  # Only run on main branch
-    
+    if: github.ref == 'refs/heads/master'  # Only run on master branch
+
     steps:
     - name: Deployment readiness check
       run: |

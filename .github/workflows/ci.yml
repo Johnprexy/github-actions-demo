@@ -37,7 +37,7 @@ jobs:
     
     # Step 4: Run ESLint to check code style
     - name: Run ESLint
-      run: npm run lint
+      run: npx eslint src/ tests/
 
   # Job 2: Unit Tests with Coverage
   unit-tests:
@@ -64,12 +64,12 @@ jobs:
       run: npm install --include=dev
     
     - name: Run tests
-      run: npm test
+      run: npx jest
     
     # Generate test coverage report (only for Node.js 18)
     - name: Generate coverage report
       if: matrix.node-version == '18'
-      run: npm run test:coverage
+      run: npx jest --coverage --coverageReporters=lcov text
     
     # Upload coverage report as artifact
     - name: Upload coverage report
@@ -100,7 +100,7 @@ jobs:
       run: npm install --include=dev
     
     - name: Run tests with coverage
-      run: npm run test:coverage
+      run: npx jest --coverage --coverageReporters=lcov text
     
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@master
